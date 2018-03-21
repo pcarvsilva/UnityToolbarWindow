@@ -28,17 +28,23 @@ public class ToolbarWindow : EditorWindow
 
     void SceneGUI(SceneView sceneView)
     {
+        if (selectedMethod == null) return;
+        HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
         if (Event.current != null && Event.current.type == EventType.MouseDown)
         {
-            Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
-            RaycastHit hit;
-            Physics.Raycast(ray, out hit);
-            if (selectedMethod != null)
+            if (Event.current.button == 0)
             {
+                Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+                RaycastHit hit;
+                Physics.Raycast(ray, out hit);
                 List<object> parameters = new List<object>();
                 parameters.Add(hit);
-                selectedMethod.Invoke(selectedAgent,parameters.ToArray());
+                selectedMethod.Invoke(selectedAgent, parameters.ToArray());
+            }
+            else
+            {
+                ToolbarWindow.selectedMethod = null;
+                ToolbarWindow.selectedAgent = null;
             }
         }
     }
@@ -72,8 +78,6 @@ internal static class ToolbarWindowExtensionMethods
 {
     public static void DrawDefaultToolbarWindowGUI(this Editor editor)
     {
-
-        EditorGUILayout.InspectorTitlebar(false, editor.target);
         List<MethodInfo> methods =
             editor.target.GetType()
                 .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -83,12 +87,12 @@ internal static class ToolbarWindowExtensionMethods
                         !m.ContainsGenericParameters
                 ).ToList();
 
+        if (methods.Count == 0) return;
+        EditorGUILayout.InspectorTitlebar(false, editor.target);
         EditorGUILayout.BeginHorizontal();
         foreach (MethodInfo method in methods)
-        {
-            string buttonText = ObjectNames.NicifyVariableName(method.Name);
-
-            if (EditorGUILayout.ToggleLeft(buttonText, method == ToolbarWindow.selectedMethod))
+        {        
+            if (EditorGUILayout.ToggleLeft(ObjectNames.NicifyVariableName(method.Name), method == ToolbarWindow.selectedMethod))
             {
                 ToolbarWindow.selectedMethod = method;
                 ToolbarWindow.selectedAgent = editor.target as Component;
